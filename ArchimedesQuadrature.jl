@@ -52,23 +52,58 @@ end
 md" ## 2D"
 
 # ╔═╡ d6e321f7-dbe0-47e3-bada-795243a97da4
-@bind level_2d PlutoUI.Slider(0:7; default=2, show_value=true)
+@bind level_2d PlutoUI.Slider(0:10; default=2, show_value=true)
 
 # ╔═╡ e901a3c4-e454-4264-ac89-835ec91f30aa
-x_2d = range(0,1,length=2^level_2d+1)
+begin
+	n_2d = 2^level_2d+1
+	x_2d = range(0,1,length=n_2d)
+end
+
+# ╔═╡ fdb1f232-0c04-4d9b-93d2-50b3784c4682
+begin
+	#func_2d(x) = -((x-.4)*2)^2+1
+	func_2d(x) = sin(10x)
+	len = 65
+	x_func = range(0,1,length=len)
+	aprox = zeros(len)
+end
+
+# ╔═╡ b855cb6f-3fd8-4b22-a268-1ab0a8fcd531
+length(aprox+x_func)
+
+# ╔═╡ f3b17384-14f7-4028-8645-7069b6712952
+surps = ones(n_2d)
 
 # ╔═╡ 02691781-df67-4127-92b9-5f13b86b607d
 begin
 	f_2d = Figure()
 	ax_2d = Axis(f_2d[1, 1])
+	lines!(x_func, func_2d.(x_func))
 	for lev in 0:level_2d
-		n_2d = 2^lev
-		hn_2d = 1/n_2d
-		for i in min(1,lev):min(2,lev+1):n_2d
-			lines!(x_2d, hat_func.(x_2d, i*hn_2d, hn_2d))
+		n_lev = 2^lev
+		hn_lev = 1/n_lev
+		for i in min(1,lev):min(2,lev+1):n_lev
+			id = Int(i*hn_lev*(n_2d-1)+1)
+			surps[id] = func_2d(i*hn_lev)
+			if lev>0
+				d = Int(hn_lev*(n_2d-1))
+				surps[id] -= (func_2d((i-1)*hn_lev) + func_2d((i+1)*hn_lev))/2
+			end
+			aprox += hat_func.(x_func, i*hn_lev, hn_lev)*surps[id]
 		end
+		lines!(x_func, aprox)
 	end
+	final_aprox = aprox
 	f_2d
+end
+
+# ╔═╡ 5a765cec-7c19-4812-8c73-d9bada937642
+begin
+	f_aprox = Figure()
+	ax_aprox = Axis(f_aprox[1, 1])
+	lines!(x_func, final_aprox)
+	f_aprox
 end
 
 # ╔═╡ cf87a49e-11d8-4aa9-87d5-7acf32bac9b7
@@ -1746,9 +1781,13 @@ version = "1.9.2+0"
 # ╠═20fa5b04-8024-43e8-9f95-f47aa6963842
 # ╠═5032fc14-5917-46d7-8c3e-5112eec611e8
 # ╟─ca6ce552-2ac0-44d3-98bb-e0069ea0908e
-# ╠═d6e321f7-dbe0-47e3-bada-795243a97da4
-# ╠═e901a3c4-e454-4264-ac89-835ec91f30aa
+# ╟─d6e321f7-dbe0-47e3-bada-795243a97da4
+# ╟─e901a3c4-e454-4264-ac89-835ec91f30aa
+# ╟─fdb1f232-0c04-4d9b-93d2-50b3784c4682
+# ╟─b855cb6f-3fd8-4b22-a268-1ab0a8fcd531
+# ╟─f3b17384-14f7-4028-8645-7069b6712952
 # ╠═02691781-df67-4127-92b9-5f13b86b607d
+# ╟─5a765cec-7c19-4812-8c73-d9bada937642
 # ╟─cf87a49e-11d8-4aa9-87d5-7acf32bac9b7
 # ╟─3bbfadf9-21a1-4c94-a725-41fd4f19a26c
 # ╟─d926d4e9-3805-4748-9c8d-fa1100e17793
