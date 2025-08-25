@@ -33,7 +33,7 @@ hat_func(x,xn,hn) = max(1-abs(x-xn)/hn,0)
 
 # ╔═╡ 436ccd41-759b-41ca-bb82-3d2689713b14
 function plot_hats(level)
-	n_hat = 2^hat_level
+	n_hat = 2^level
 	x_hat = range(0,1,length=n_hat+1)
 	hn_hat = 1/n_hat
 
@@ -168,8 +168,23 @@ begin
 	"""
 end
 
+# ╔═╡ deca2f3a-3035-4aeb-87b6-ff7705acaa11
+md" ## 2D Basis"
+
+# ╔═╡ ec6b69e8-b849-4547-8759-b53c1d28eaaf
+md"X level"
+
+# ╔═╡ 1dc68d52-bbbf-4a8e-a5e2-91650de315aa
+@bind x_level PlutoUI.Slider(0:7; default=2, show_value=true)
+
+# ╔═╡ a5fca007-7d48-429a-8ad8-3eb835b91f06
+md"Y level"
+
+# ╔═╡ 4bde7230-fb08-440a-ab7e-2a8f76fbde5f
+@bind y_level PlutoUI.Slider(0:7; default=1, show_value=true)
+
 # ╔═╡ cf87a49e-11d8-4aa9-87d5-7acf32bac9b7
-md" ## 3D"
+md" ## 2D Quadrature"
 
 # ╔═╡ 3bbfadf9-21a1-4c94-a725-41fd4f19a26c
 @bind az PlutoUI.Slider(-1:0.01:1; default=-1/3, show_value=true)
@@ -177,15 +192,47 @@ md" ## 3D"
 # ╔═╡ d926d4e9-3805-4748-9c8d-fa1100e17793
 @bind el PlutoUI.Slider(-1:0.01:1; default=1/6, show_value=true)
 
+# ╔═╡ 7b35d74e-0e12-42b0-9763-c38621cd0c5a
+function plot_2d_hats(level_x, level_y)
+	d = 8
+	n_hat_x = 2^(level_x)
+	n_hat_y = 2^(level_y)
+	x_hat = range(0,1,length=(n_hat_x*d)+1)
+	y_hat = range(0,1,length=(n_hat_y*d)+1)
+	hn_hat_x = 1/n_hat_x
+	hn_hat_y = 1/n_hat_y
+	
+	z_hat_x = zeros((n_hat_x*d)+1)
+	z_hat_y = zeros((n_hat_y*d)+1)
+
+	for i in min(1,level_x):min(2,level_x+1):n_hat_x
+		z_hat_x += hat_func.(x_hat, i*hn_hat_x, hn_hat_x)
+	end
+	for i in min(1,level_y):min(2,level_y+1):n_hat_y
+		z_hat_y += hat_func.(y_hat, i*hn_hat_y, hn_hat_y)
+	end
+
+	fig_2d_hat = Figure()
+	ax_2d_hat = Axis3(fig_2d_hat[1, 1],azimuth = az * pi, elevation = el * pi)
+	wireframe!(ax_2d_hat, x_hat, y_hat, z_hat_x * z_hat_y')
+
+	fig_2d_hat
+
+	#return z_hat_x, z_hat_y
+end
+
+# ╔═╡ 4109c517-e965-4159-abbc-db2c71a9e3e9
+plot_2d_hats(x_level, y_level)
+
 # ╔═╡ 6a92f393-fc74-4a62-87b1-ed73b6746725
 begin
-	x = range(-1, 1, length=100)
-	y = range(-1, 1, length=100)
+	x = range(-1, 1, length=25)
+	y = range(-1, 1, length=25)
 	z = [-xi^2 - yi^2 + 2 for xi in x, yi in y]
 	
 	fig = Figure()
 	ax = Axis3(fig[1, 1], xlabel="x", ylabel="y", zlabel="z", azimuth = az * pi, elevation = el * pi)
-	wireframe!(ax, x, y, z, colormap = :viridis)
+	wireframe!(ax, x, y, z)
 	fig
 end
 
@@ -1865,6 +1912,13 @@ version = "1.9.2+0"
 # ╟─b04a5a06-c1d5-478e-9a92-55dc5a9750ab
 # ╟─554f531a-6b27-401f-a58e-4a7d6f5817d7
 # ╟─8acaf1a0-ee2e-427e-a448-2a064f8a0876
+# ╟─deca2f3a-3035-4aeb-87b6-ff7705acaa11
+# ╟─ec6b69e8-b849-4547-8759-b53c1d28eaaf
+# ╟─1dc68d52-bbbf-4a8e-a5e2-91650de315aa
+# ╟─a5fca007-7d48-429a-8ad8-3eb835b91f06
+# ╟─4bde7230-fb08-440a-ab7e-2a8f76fbde5f
+# ╟─7b35d74e-0e12-42b0-9763-c38621cd0c5a
+# ╟─4109c517-e965-4159-abbc-db2c71a9e3e9
 # ╟─cf87a49e-11d8-4aa9-87d5-7acf32bac9b7
 # ╟─3bbfadf9-21a1-4c94-a725-41fd4f19a26c
 # ╟─d926d4e9-3805-4748-9c8d-fa1100e17793
