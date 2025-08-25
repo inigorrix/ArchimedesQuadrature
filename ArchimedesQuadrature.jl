@@ -23,7 +23,7 @@ using PlutoUI, GLMakie, HCubature
 md" # Archimedes Quadrature"
 
 # ╔═╡ edf673b3-d771-45a7-b0de-3e3635114458
-md" ## Basis Functions"
+md" ## 1D Basis Functions"
 
 # ╔═╡ 05bcbeb9-27ba-4463-b788-44a3f3a9b8de
 @bind hat_level PlutoUI.Slider(0:7; default=2, show_value=true)
@@ -169,7 +169,7 @@ begin
 end
 
 # ╔═╡ deca2f3a-3035-4aeb-87b6-ff7705acaa11
-md" ## 2D Basis"
+md" ## 2D Basis Functions"
 
 # ╔═╡ ec6b69e8-b849-4547-8759-b53c1d28eaaf
 md"X level"
@@ -187,10 +187,10 @@ md"Y level"
 md" ## 2D Quadrature"
 
 # ╔═╡ 3bbfadf9-21a1-4c94-a725-41fd4f19a26c
-@bind az PlutoUI.Slider(-1:0.01:1; default=-1/3, show_value=true)
+@bind az PlutoUI.Slider(-1:0.01:1; default=-2/3, show_value=true)
 
 # ╔═╡ d926d4e9-3805-4748-9c8d-fa1100e17793
-@bind el PlutoUI.Slider(-1:0.01:1; default=1/6, show_value=true)
+@bind el PlutoUI.Slider(-1:0.01:1; default=1/9, show_value=true)
 
 # ╔═╡ 7b35d74e-0e12-42b0-9763-c38621cd0c5a
 function plot_2d_hats(level_x, level_y)
@@ -217,24 +217,99 @@ function plot_2d_hats(level_x, level_y)
 	wireframe!(ax_2d_hat, x_hat, y_hat, z_hat_x * z_hat_y')
 
 	fig_2d_hat
-
-	#return z_hat_x, z_hat_y
 end
 
 # ╔═╡ 4109c517-e965-4159-abbc-db2c71a9e3e9
 plot_2d_hats(x_level, y_level)
 
-# ╔═╡ 6a92f393-fc74-4a62-87b1-ed73b6746725
+# ╔═╡ 37d0c51f-2fdc-4469-967c-456d7ecac418
+func_2d(x,y) = -((x-.7)*2)^2 - ((y-.4)*2)^2 + 2
+
+# ╔═╡ 4e0808a5-eedd-4d3a-8360-3759213c35ce
 begin
-	x = range(-1, 1, length=25)
-	y = range(-1, 1, length=25)
-	z = [-xi^2 - yi^2 + 2 for xi in x, yi in y]
-	
-	fig = Figure()
-	ax = Axis3(fig[1, 1], xlabel="x", ylabel="y", zlabel="z", azimuth = az * pi, elevation = el * pi)
-	wireframe!(ax, x, y, z)
-	fig
+	plot_2d_len = 33
+	x_2d_plot = range(0,1,length=plot_2d_len)
+	y_2d_plot = range(0,1,length=plot_2d_len)
+	fig_2d_func = Figure()
+	ax_2d_func = Axis3(fig_2d_func[1, 1], azimuth = az * pi, elevation = el * pi)
+	wireframe!(x_2d_plot, y_2d_plot,
+			   [func_2d(xi,yi) for xi in x_2d_plot, yi in y_2d_plot])
+	fig_2d_func
 end
+
+# ╔═╡ 82024b6b-a99d-4682-bcb8-e471e4dc5659
+@bind level_2d PlutoUI.Slider(0:10; default=2, show_value=true)
+
+# ╔═╡ bf4b951b-7e2b-49aa-beef-8d898c70c042
+n_2d = 2^level_2d+1
+
+# ╔═╡ cf3ff004-719d-4f46-a1e1-e92a5ff87ac7
+# Iterative method
+function calc_2d_aprox_iter(func, level)
+	aprox = zeros(n_2d, n_2d)
+	surps = zeros(n_2d, n_2d)
+	#quad = (func(0)+func(1))*.5
+
+	hn_max = 1/(2^level)
+
+	for i in 1:n_2d
+		surps[i,begin] = func_2d((i-1)*hn_max, 0)
+		surps[i,end] = func_2d((i-1)*hn_max, 1)
+		surps[begin,i] = func_2d(0, (i-1)*hn_max)
+		surps[end, i] = func_2d(1, (i-1)*hn_max)
+	end
+	
+	for lev in 1:level
+		n_lev = 2^lev
+		hn_lev = 1/n_lev
+		for i in min(1,lev):min(2,lev+1):n_lev
+			for j in min(1,lev):min(2,lev+1):n_lev
+				id = Int(i*hn_lev*(n_2d-1)+1)
+				jd = Int(j*hn_lev*(n_2d-1)+1)
+				println(id, jd)
+				surps[id,jd] = func_2d(i*hn_lev, j*hn_lev)
+				if lev>0
+					surps[id,jd] -= (func((i-1)*hn_lev, j*hn_lev) +
+									func((i+1)*hn_lev, j*hn_lev) +
+									func(i*hn_lev, (j-1)*hn_lev) +
+									func(i*hn_lev, (j+1)*hn_lev)) * .5
+					#quad += surps[id,jd] * hn_lev
+				end
+				#aprox += hat_func.(x_plot, i*hn_lev, hn_lev)*surps[id, jd]
+			end
+		end
+	end
+	return surps
+end
+
+# ╔═╡ f258061e-eab6-447a-bb71-2ac0f13fde4f
+begin
+	surps_2d = calc_2d_aprox_iter(func_2d, level_2d)
+	x_aprox = range(0,1,length=n_2d)
+	y_aprox = range(0,1,length=n_2d)
+	fig_2d_aprox = Figure()
+	ax_2d_aprox = Axis3(fig_2d_aprox[1, 1], azimuth = az * pi, elevation = el * pi)
+	if "aproximation" in to_plot
+		wireframe!(x_aprox, y_aprox, surps_2d)
+	end
+	if "function" in to_plot
+		wireframe!(x_2d_plot, y_2d_plot,
+			   [func_2d(xi,yi) for xi in x_2d_plot, yi in y_2d_plot])
+	end
+	fig_2d_aprox
+end
+
+# ╔═╡ 287a4348-de8c-427f-a376-4fc22883b6b9
+x_a_prox = range(0,1,length=n_2d)
+
+# ╔═╡ 9578789a-df0c-4bed-af20-a00f26bc2df8
+surps_2_d = calc_2d_aprox_iter(func_2d, level_2d)
+
+# ╔═╡ 587e6aed-be18-49ee-b034-636e98fab68f
+surps_2_d[begin, end]
+
+# ╔═╡ e84d535f-565e-4c48-820e-f1f1db5260a5
+n_2d
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1905,7 +1980,7 @@ version = "1.9.2+0"
 # ╟─ca6ce552-2ac0-44d3-98bb-e0069ea0908e
 # ╟─b23ad289-e6ef-468e-80a9-66c2a44ce38f
 # ╟─07fb8f13-00be-42e1-aa5f-aad6dd80e6fb
-# ╟─d6e321f7-dbe0-47e3-bada-795243a97da4
+# ╠═d6e321f7-dbe0-47e3-bada-795243a97da4
 # ╟─74cd64ff-5ace-4fcf-bac1-d3e4e656aa14
 # ╟─31a3d986-1f3f-4bfc-98dc-17c84f574e4e
 # ╟─fdb10ff2-82f4-4431-8d3e-679b0800e5e3
@@ -1922,6 +1997,15 @@ version = "1.9.2+0"
 # ╟─cf87a49e-11d8-4aa9-87d5-7acf32bac9b7
 # ╟─3bbfadf9-21a1-4c94-a725-41fd4f19a26c
 # ╟─d926d4e9-3805-4748-9c8d-fa1100e17793
-# ╠═6a92f393-fc74-4a62-87b1-ed73b6746725
+# ╠═37d0c51f-2fdc-4469-967c-456d7ecac418
+# ╟─4e0808a5-eedd-4d3a-8360-3759213c35ce
+# ╟─82024b6b-a99d-4682-bcb8-e471e4dc5659
+# ╟─bf4b951b-7e2b-49aa-beef-8d898c70c042
+# ╠═cf3ff004-719d-4f46-a1e1-e92a5ff87ac7
+# ╠═f258061e-eab6-447a-bb71-2ac0f13fde4f
+# ╠═287a4348-de8c-427f-a376-4fc22883b6b9
+# ╠═9578789a-df0c-4bed-af20-a00f26bc2df8
+# ╠═587e6aed-be18-49ee-b034-636e98fab68f
+# ╠═e84d535f-565e-4c48-820e-f1f1db5260a5
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
