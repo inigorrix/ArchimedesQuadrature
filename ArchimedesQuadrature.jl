@@ -28,10 +28,11 @@ md" ## Basis Functions"
 # ╔═╡ 05bcbeb9-27ba-4463-b788-44a3f3a9b8de
 @bind hat_level PlutoUI.Slider(0:7; default=2, show_value=true)
 
+# ╔═╡ cbef4fdb-556c-45df-90a1-8dd29b9b90e7
+hat_func(x,xn,hn) = max(1-abs(x-xn)/hn,0)
+
 # ╔═╡ 436ccd41-759b-41ca-bb82-3d2689713b14
 function plot_hats(level)
-	hat_func(x,xn,hn) = max(1-abs(x-xn)/hn,0)
-	
 	n_hat = 2^hat_level
 	x_hat = range(0,1,length=n_hat+1)
 	hn_hat = 1/n_hat
@@ -56,19 +57,45 @@ func_1d(x) = -((x-.4)*2)^2+1
 # ╔═╡ 07fb8f13-00be-42e1-aa5f-aad6dd80e6fb
 begin
 	plot_len = 129
-	x_func = range(0,1,length=plot_len)
+	x_plot = range(0,1,length=plot_len)
 	fig_1d_func = Figure()
 	ax_1d_func = Axis(fig_1d_func[1, 1])
-	lines!(x_func, func_1d.(x_func))
+	lines!(x_plot, func_1d.(x_plot))
 	fig_1d_func
 end
 
 # ╔═╡ d6e321f7-dbe0-47e3-bada-795243a97da4
-@bind level_2d PlutoUI.Slider(0:10; default=2, show_value=true)
+@bind level_1d PlutoUI.Slider(0:10; default=2, show_value=true)
+
+# ╔═╡ 74cd64ff-5ace-4fcf-bac1-d3e4e656aa14
+@bind to_plot MultiCheckBox(["aproximation", "function", "steps"],
+						   default=["aproximation", "function"])
+
+# ╔═╡ 31a3d986-1f3f-4bfc-98dc-17c84f574e4e
+function calc_1d_aprox_iter(func, level)
+	n_1d = 2^level+1
+	x_1d = range(0,1,length=n_1d)
+	aprox = zeros(plot_len)
+	surps = ones(n_1d)
+	
+	for lev in 0:level
+		n_lev = 2^lev
+		hn_lev = 1/n_lev
+		for i in min(1,lev):min(2,lev+1):n_lev
+			id = Int(i*hn_lev*(n_1d-1)+1)
+			surps[id] = func(i*hn_lev)
+			if lev>0
+				surps[id] -= (func((i-1)*hn_lev) + func((i+1)*hn_lev))/2
+			end
+			aprox += hat_func.(x_plot, i*hn_lev, hn_lev)*surps[id]
+		end
+	end
+	return aprox, surps
+end
 
 # ╔═╡ e901a3c4-e454-4264-ac89-835ec91f30aa
 begin
-	n_2d = 2^level_2d+1
+	n_2d = 2^level_1d+1
 	x_2d = range(0,1,length=n_2d)
 end
 
@@ -77,6 +104,33 @@ aprox = zeros(len)
 
 # ╔═╡ f3b17384-14f7-4028-8645-7069b6712952
 surps = ones(n_2d)
+
+# ╔═╡ 554f531a-6b27-401f-a58e-4a7d6f5817d7
+begin
+	aprox_1d, surps_1d = calc_1d_aprox_iter(func_1d, level_1d)
+	fig_1d_aprox = Figure()
+	ax_1d_aprox = Axis(fig_1d_aprox[1, 1])
+	if "aproximation" in to_plot
+		lines!(x_plot, aprox_1d)
+	end
+	if "function" in to_plot
+		lines!(x_plot, func_1d.(x_plot))
+	end
+	if "steps" in to_plot
+		local steps_1d = zeros(plot_len)
+		n_1d = 2^level_1d+1
+		for lev in 0:level_1d-1
+			n_lev = 2^lev
+			hn_lev = 1/n_lev
+			for i in min(1,lev):min(2,lev+1):n_lev
+				id = Int(i*hn_lev*(n_1d-1)+1)
+				steps_1d += hat_func.(x_plot, i*hn_lev, hn_lev)*surps[id]
+			end
+			lines!(x_plot, steps_1d)
+		end
+	end
+	fig_1d_aprox
+end
 
 # ╔═╡ 02691781-df67-4127-92b9-5f13b86b607d
 begin
@@ -1800,12 +1854,16 @@ version = "1.9.2+0"
 # ╠═def8acb1-3536-4d91-a6b1-468624dcfb59
 # ╟─edf673b3-d771-45a7-b0de-3e3635114458
 # ╟─05bcbeb9-27ba-4463-b788-44a3f3a9b8de
+# ╟─cbef4fdb-556c-45df-90a1-8dd29b9b90e7
 # ╟─436ccd41-759b-41ca-bb82-3d2689713b14
 # ╟─982250d3-87ff-4af1-8c75-ab50f0c86a2e
 # ╟─ca6ce552-2ac0-44d3-98bb-e0069ea0908e
 # ╟─b23ad289-e6ef-468e-80a9-66c2a44ce38f
 # ╟─07fb8f13-00be-42e1-aa5f-aad6dd80e6fb
-# ╠═d6e321f7-dbe0-47e3-bada-795243a97da4
+# ╟─d6e321f7-dbe0-47e3-bada-795243a97da4
+# ╠═74cd64ff-5ace-4fcf-bac1-d3e4e656aa14
+# ╟─31a3d986-1f3f-4bfc-98dc-17c84f574e4e
+# ╠═554f531a-6b27-401f-a58e-4a7d6f5817d7
 # ╟─e901a3c4-e454-4264-ac89-835ec91f30aa
 # ╠═26ce4c50-2931-4de8-b660-676c8b96c2af
 # ╟─f3b17384-14f7-4028-8645-7069b6712952
