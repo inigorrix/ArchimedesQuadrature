@@ -17,7 +17,7 @@ macro bind(def, element)
 end
 
 # ╔═╡ def8acb1-3536-4d91-a6b1-468624dcfb59
-using PlutoUI, GLMakie
+using PlutoUI, GLMakie, HCubature
 
 # ╔═╡ adb35ef9-b9b1-4870-bd32-303e7b64dfdd
 md" # Archimedes Quadrature"
@@ -25,31 +25,43 @@ md" # Archimedes Quadrature"
 # ╔═╡ edf673b3-d771-45a7-b0de-3e3635114458
 md" ## Basis Functions"
 
-# ╔═╡ a42ee33f-49bb-4410-8075-ccb6a81a6bcc
-hat_func(x,xn,hn) = max(1-abs(x-xn)/hn,0)
-
 # ╔═╡ 05bcbeb9-27ba-4463-b788-44a3f3a9b8de
-@bind level PlutoUI.Slider(0:7; default=1, show_value=true)
+@bind hat_level PlutoUI.Slider(0:7; default=2, show_value=true)
 
-# ╔═╡ 20fa5b04-8024-43e8-9f95-f47aa6963842
-begin
-	n = 2^level
-	x_hat = range(0,1,length=n+1)
-	hn = 1/n
-end
+# ╔═╡ 436ccd41-759b-41ca-bb82-3d2689713b14
+function plot_hats(level)
+	hat_func(x,xn,hn) = max(1-abs(x-xn)/hn,0)
+	
+	n_hat = 2^hat_level
+	x_hat = range(0,1,length=n_hat+1)
+	hn_hat = 1/n_hat
 
-# ╔═╡ 5032fc14-5917-46d7-8c3e-5112eec611e8
-begin
-	f = Figure()
-	ax_hat = Axis(f[1, 1])
-	for i in min(1,level):min(2,level+1):n
-		lines!(x_hat, hat_func.(x_hat, i*hn, hn))
+	fig_hat = Figure()
+	ax_hat = Axis(fig_hat[1, 1])
+	for i in min(1,level):min(2,level+1):n_hat
+		lines!(x_hat, hat_func.(x_hat, i*hn_hat, hn_hat))
 	end
-	f
+	fig_hat
 end
+
+# ╔═╡ 982250d3-87ff-4af1-8c75-ab50f0c86a2e
+plot_hats(hat_level)
 
 # ╔═╡ ca6ce552-2ac0-44d3-98bb-e0069ea0908e
-md" ## 2D"
+md" ## 1D Quadrature"
+
+# ╔═╡ b23ad289-e6ef-468e-80a9-66c2a44ce38f
+func_1d(x) = -((x-.4)*2)^2+1
+
+# ╔═╡ 07fb8f13-00be-42e1-aa5f-aad6dd80e6fb
+begin
+	plot_len = 129
+	x_func = range(0,1,length=plot_len)
+	fig_1d_func = Figure()
+	ax_1d_func = Axis(fig_1d_func[1, 1])
+	lines!(x_func, func_1d.(x_func))
+	fig_1d_func
+end
 
 # ╔═╡ d6e321f7-dbe0-47e3-bada-795243a97da4
 @bind level_2d PlutoUI.Slider(0:10; default=2, show_value=true)
@@ -60,17 +72,8 @@ begin
 	x_2d = range(0,1,length=n_2d)
 end
 
-# ╔═╡ fdb1f232-0c04-4d9b-93d2-50b3784c4682
-begin
-	#func_2d(x) = -((x-.4)*2)^2+1
-	func_2d(x) = sin(10x)
-	len = 65
-	x_func = range(0,1,length=len)
-	aprox = zeros(len)
-end
-
-# ╔═╡ b855cb6f-3fd8-4b22-a268-1ab0a8fcd531
-length(aprox+x_func)
+# ╔═╡ 26ce4c50-2931-4de8-b660-676c8b96c2af
+aprox = zeros(len)
 
 # ╔═╡ f3b17384-14f7-4028-8645-7069b6712952
 surps = ones(n_2d)
@@ -95,8 +98,12 @@ begin
 		lines!(x_func, aprox)
 	end
 	final_aprox = aprox
+	final_surps = surps
 	f_2d
 end
+
+# ╔═╡ fa1efb71-7d54-463f-8892-ba199532542b
+sum(final_surps)
 
 # ╔═╡ 5a765cec-7c19-4812-8c73-d9bada937642
 begin
@@ -105,6 +112,9 @@ begin
 	lines!(x_func, final_aprox)
 	f_aprox
 end
+
+# ╔═╡ e0471262-b6ee-41d7-98ff-0b3253a1dfd7
+hquadrature(func_2d, 0, 1)[1]
 
 # ╔═╡ cf87a49e-11d8-4aa9-87d5-7acf32bac9b7
 md" ## 3D"
@@ -131,10 +141,12 @@ end
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
+HCubature = "19dc6840-f33b-545b-b366-655c7e3ffd49"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 
 [compat]
 GLMakie = "~0.13.6"
+HCubature = "~1.7.0"
 PlutoUI = "~0.7.70"
 """
 
@@ -144,7 +156,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.11.6"
 manifest_format = "2.0"
-project_hash = "bf482135d172e7517b9bac1111644f3c8109479e"
+project_hash = "7ab743a440e70af3f9806944c22f35116a6816da"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -311,6 +323,11 @@ deps = ["ColorTypes", "FixedPointNumbers", "Reexport"]
 git-tree-sha1 = "37ea44092930b1811e666c3bc38065d7d87fcc74"
 uuid = "5ae59095-9a9b-59fe-a467-6f913c188581"
 version = "0.13.1"
+
+[[deps.Combinatorics]]
+git-tree-sha1 = "8010b6bb3388abe68d95743dcbea77650bb2eddf"
+uuid = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
+version = "1.0.3"
 
 [[deps.Compat]]
 deps = ["TOML", "UUIDs"]
@@ -615,6 +632,12 @@ version = "0.11.1"
 git-tree-sha1 = "53bb909d1151e57e2484c3d1b53e19552b887fb2"
 uuid = "42e2da0e-8278-4e71-bc24-59509adca0fe"
 version = "1.0.2"
+
+[[deps.HCubature]]
+deps = ["Combinatorics", "DataStructures", "LinearAlgebra", "QuadGK", "StaticArrays"]
+git-tree-sha1 = "19ef9f0cb324eed957b7fe7257ac84e8ed8a48ec"
+uuid = "19dc6840-f33b-545b-b366-655c7e3ffd49"
+version = "1.7.0"
 
 [[deps.HarfBuzz_jll]]
 deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "Graphite2_jll", "JLLWrappers", "Libdl", "Libffi_jll"]
@@ -1776,18 +1799,20 @@ version = "1.9.2+0"
 # ╟─adb35ef9-b9b1-4870-bd32-303e7b64dfdd
 # ╠═def8acb1-3536-4d91-a6b1-468624dcfb59
 # ╟─edf673b3-d771-45a7-b0de-3e3635114458
-# ╠═a42ee33f-49bb-4410-8075-ccb6a81a6bcc
-# ╠═05bcbeb9-27ba-4463-b788-44a3f3a9b8de
-# ╠═20fa5b04-8024-43e8-9f95-f47aa6963842
-# ╠═5032fc14-5917-46d7-8c3e-5112eec611e8
+# ╟─05bcbeb9-27ba-4463-b788-44a3f3a9b8de
+# ╟─436ccd41-759b-41ca-bb82-3d2689713b14
+# ╟─982250d3-87ff-4af1-8c75-ab50f0c86a2e
 # ╟─ca6ce552-2ac0-44d3-98bb-e0069ea0908e
-# ╟─d6e321f7-dbe0-47e3-bada-795243a97da4
+# ╟─b23ad289-e6ef-468e-80a9-66c2a44ce38f
+# ╟─07fb8f13-00be-42e1-aa5f-aad6dd80e6fb
+# ╠═d6e321f7-dbe0-47e3-bada-795243a97da4
 # ╟─e901a3c4-e454-4264-ac89-835ec91f30aa
-# ╟─fdb1f232-0c04-4d9b-93d2-50b3784c4682
-# ╟─b855cb6f-3fd8-4b22-a268-1ab0a8fcd531
+# ╠═26ce4c50-2931-4de8-b660-676c8b96c2af
 # ╟─f3b17384-14f7-4028-8645-7069b6712952
 # ╠═02691781-df67-4127-92b9-5f13b86b607d
-# ╟─5a765cec-7c19-4812-8c73-d9bada937642
+# ╠═fa1efb71-7d54-463f-8892-ba199532542b
+# ╠═5a765cec-7c19-4812-8c73-d9bada937642
+# ╠═e0471262-b6ee-41d7-98ff-0b3253a1dfd7
 # ╟─cf87a49e-11d8-4aa9-87d5-7acf32bac9b7
 # ╟─3bbfadf9-21a1-4c94-a725-41fd4f19a26c
 # ╟─d926d4e9-3805-4748-9c8d-fa1100e17793
