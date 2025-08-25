@@ -77,6 +77,7 @@ function calc_1d_aprox_iter(func, level)
 	x_1d = range(0,1,length=n_1d)
 	aprox = zeros(plot_len)
 	surps = ones(n_1d)
+	weights = ones(n_1d) * .5
 	
 	for lev in 0:level
 		n_lev = 2^lev
@@ -85,29 +86,18 @@ function calc_1d_aprox_iter(func, level)
 			id = Int(i*hn_lev*(n_1d-1)+1)
 			surps[id] = func(i*hn_lev)
 			if lev>0
+				weights[id] = hn_lev
 				surps[id] -= (func((i-1)*hn_lev) + func((i+1)*hn_lev))/2
 			end
 			aprox += hat_func.(x_plot, i*hn_lev, hn_lev)*surps[id]
 		end
 	end
-	return aprox, surps
+	return aprox, surps, sum(surps .* weights)
 end
-
-# ╔═╡ e901a3c4-e454-4264-ac89-835ec91f30aa
-begin
-	n_2d = 2^level_1d+1
-	x_2d = range(0,1,length=n_2d)
-end
-
-# ╔═╡ 26ce4c50-2931-4de8-b660-676c8b96c2af
-aprox = zeros(len)
-
-# ╔═╡ f3b17384-14f7-4028-8645-7069b6712952
-surps = ones(n_2d)
 
 # ╔═╡ 554f531a-6b27-401f-a58e-4a7d6f5817d7
 begin
-	aprox_1d, surps_1d = calc_1d_aprox_iter(func_1d, level_1d)
+	aprox_1d, surps_1d, quad_1d = calc_1d_aprox_iter(func_1d, level_1d)
 	fig_1d_aprox = Figure()
 	ax_1d_aprox = Axis(fig_1d_aprox[1, 1])
 	if "aproximation" in to_plot
@@ -124,7 +114,7 @@ begin
 			hn_lev = 1/n_lev
 			for i in min(1,lev):min(2,lev+1):n_lev
 				id = Int(i*hn_lev*(n_1d-1)+1)
-				steps_1d += hat_func.(x_plot, i*hn_lev, hn_lev)*surps[id]
+				steps_1d += hat_func.(x_plot, i*hn_lev, hn_lev)*surps_1d[id]
 			end
 			lines!(x_plot, steps_1d)
 		end
@@ -132,43 +122,18 @@ begin
 	fig_1d_aprox
 end
 
-# ╔═╡ 02691781-df67-4127-92b9-5f13b86b607d
+# ╔═╡ 8acaf1a0-ee2e-427e-a448-2a064f8a0876
 begin
-	f_2d = Figure()
-	ax_2d = Axis(f_2d[1, 1])
-	lines!(x_func, func_2d.(x_func))
-	for lev in 0:level_2d
-		n_lev = 2^lev
-		hn_lev = 1/n_lev
-		for i in min(1,lev):min(2,lev+1):n_lev
-			id = Int(i*hn_lev*(n_2d-1)+1)
-			surps[id] = func_2d(i*hn_lev)
-			if lev>0
-				d = Int(hn_lev*(n_2d-1))
-				surps[id] -= (func_2d((i-1)*hn_lev) + func_2d((i+1)*hn_lev))/2
-			end
-			aprox += hat_func.(x_func, i*hn_lev, hn_lev)*surps[id]
-		end
-		lines!(x_func, aprox)
-	end
-	final_aprox = aprox
-	final_surps = surps
-	f_2d
+	sol_1d = hquadrature(func_1d, 0, 1)[1]
+	err_1d = abs(sol_1d-quad_1d)/sol_1d
+	md"""
+	The value of the integral is **$( round(sol_1d, digits=5) )**
+	
+	The approximated value with **$(2^level_1d+1)** points is **$( round(quad_1d, digits=5) )**
+	
+	Which has an error of **$( round(err_1d*100, sigdigits=3) )%**
+	"""
 end
-
-# ╔═╡ fa1efb71-7d54-463f-8892-ba199532542b
-sum(final_surps)
-
-# ╔═╡ 5a765cec-7c19-4812-8c73-d9bada937642
-begin
-	f_aprox = Figure()
-	ax_aprox = Axis(f_aprox[1, 1])
-	lines!(x_func, final_aprox)
-	f_aprox
-end
-
-# ╔═╡ e0471262-b6ee-41d7-98ff-0b3253a1dfd7
-hquadrature(func_2d, 0, 1)[1]
 
 # ╔═╡ cf87a49e-11d8-4aa9-87d5-7acf32bac9b7
 md" ## 3D"
@@ -1860,17 +1825,11 @@ version = "1.9.2+0"
 # ╟─ca6ce552-2ac0-44d3-98bb-e0069ea0908e
 # ╟─b23ad289-e6ef-468e-80a9-66c2a44ce38f
 # ╟─07fb8f13-00be-42e1-aa5f-aad6dd80e6fb
-# ╟─d6e321f7-dbe0-47e3-bada-795243a97da4
-# ╠═74cd64ff-5ace-4fcf-bac1-d3e4e656aa14
+# ╠═d6e321f7-dbe0-47e3-bada-795243a97da4
+# ╟─74cd64ff-5ace-4fcf-bac1-d3e4e656aa14
 # ╟─31a3d986-1f3f-4bfc-98dc-17c84f574e4e
-# ╠═554f531a-6b27-401f-a58e-4a7d6f5817d7
-# ╟─e901a3c4-e454-4264-ac89-835ec91f30aa
-# ╠═26ce4c50-2931-4de8-b660-676c8b96c2af
-# ╟─f3b17384-14f7-4028-8645-7069b6712952
-# ╠═02691781-df67-4127-92b9-5f13b86b607d
-# ╠═fa1efb71-7d54-463f-8892-ba199532542b
-# ╠═5a765cec-7c19-4812-8c73-d9bada937642
-# ╠═e0471262-b6ee-41d7-98ff-0b3253a1dfd7
+# ╟─554f531a-6b27-401f-a58e-4a7d6f5817d7
+# ╟─8acaf1a0-ee2e-427e-a448-2a064f8a0876
 # ╟─cf87a49e-11d8-4aa9-87d5-7acf32bac9b7
 # ╟─3bbfadf9-21a1-4c94-a725-41fd4f19a26c
 # ╟─d926d4e9-3805-4748-9c8d-fa1100e17793
