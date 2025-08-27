@@ -223,7 +223,7 @@ end
 plot_2d_hats(x_level, y_level)
 
 # ╔═╡ 37d0c51f-2fdc-4469-967c-456d7ecac418
-func_2d(x,y) = -((x-.7)*2)^2 - ((y-.4)*2)^2 + 2
+func_2d(x,y) = 16*x*(1-x)*y*(1-y) #-((x-.7)*2)^2 - ((y-.4)*2)^2 + 2
 
 # ╔═╡ 4e0808a5-eedd-4d3a-8360-3759213c35ce
 begin
@@ -258,26 +258,38 @@ function calc_2d_aprox_iter(func, level)
 		surps[begin,i] = func_2d(0, (i-1)*hn_max)
 		surps[end, i] = func_2d(1, (i-1)*hn_max)
 	end
-	
-	for lev in 1:level
-		n_lev = 2^lev
-		hn_lev = 1/n_lev
-		for i in min(1,lev):min(2,lev+1):n_lev
-			for j in min(1,lev):min(2,lev+1):n_lev
-				id = Int(i*hn_lev*(n_2d-1)+1)
-				jd = Int(j*hn_lev*(n_2d-1)+1)
-				println(id, jd)
-				surps[id,jd] = func_2d(i*hn_lev, j*hn_lev)
-				if lev>0
-					surps[id,jd] -= (func((i-1)*hn_lev, j*hn_lev) +
-									func((i+1)*hn_lev, j*hn_lev) +
-									func(i*hn_lev, (j-1)*hn_lev) +
-									func(i*hn_lev, (j+1)*hn_lev)) * .5
-					#quad += surps[id,jd] * hn_lev
+
+	for k in 0:1
+		for lev_i in 1:level
+			n_lev_i = 2^lev_i
+			hn_lev_i = 1/n_lev_i
+			for i in min(1,lev_i):min(2,lev_i+1):n_lev_i
+				for lev_j in level:-1:1
+					n_lev_j = 2^lev_j
+					hn_lev_j = 1/n_lev_j
+					d = 2^(level-lev_j)
+					for j in min(1,lev_j):min(2,lev_j+1):n_lev_j
+						id = Int(i*hn_lev_i*(n_2d-1)+1)
+						jd = Int(j*hn_lev_j*(n_2d-1)+1)
+						if k == 0
+							surps[id,jd] = func_2d(i*hn_lev_i, j*hn_lev_j)
+						end
+						if lev_i>0
+							if k == 0
+								surps[id,jd] -= (func(i*hn_lev_i, (j-1)*hn_lev_j) +
+									func(i*hn_lev_i, (j+1)*hn_lev_j)) * .5
+							elseif k == 1
+								surps[jd,id] -= (surps[jd-d, id] +
+									surps[jd+d, id]) * .5
+							end
+							#quad += surps[id,jd] * hn_lev
+						end
+						#aprox += hat_func.(x_plot, i*hn_lev, hn_lev)*surps[id, jd]
+					end
 				end
-				#aprox += hat_func.(x_plot, i*hn_lev, hn_lev)*surps[id, jd]
 			end
 		end
+		display(surps)
 	end
 	return surps
 end
@@ -309,7 +321,12 @@ surps_2_d = calc_2d_aprox_iter(func_2d, level_2d)
 surps_2_d[begin, end]
 
 # ╔═╡ e84d535f-565e-4c48-820e-f1f1db5260a5
-n_2d
+surps_2d
+
+# ╔═╡ 66650664-2468-4007-a520-5317cc68c04e
+for i in 10:-2:1
+	println(i)
+end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1973,7 +1990,7 @@ version = "1.9.2+0"
 # ╟─adb35ef9-b9b1-4870-bd32-303e7b64dfdd
 # ╠═def8acb1-3536-4d91-a6b1-468624dcfb59
 # ╟─edf673b3-d771-45a7-b0de-3e3635114458
-# ╟─05bcbeb9-27ba-4463-b788-44a3f3a9b8de
+# ╠═05bcbeb9-27ba-4463-b788-44a3f3a9b8de
 # ╟─cbef4fdb-556c-45df-90a1-8dd29b9b90e7
 # ╟─436ccd41-759b-41ca-bb82-3d2689713b14
 # ╟─982250d3-87ff-4af1-8c75-ab50f0c86a2e
@@ -2007,5 +2024,6 @@ version = "1.9.2+0"
 # ╠═9578789a-df0c-4bed-af20-a00f26bc2df8
 # ╠═587e6aed-be18-49ee-b034-636e98fab68f
 # ╠═e84d535f-565e-4c48-820e-f1f1db5260a5
+# ╠═66650664-2468-4007-a520-5317cc68c04e
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
