@@ -223,7 +223,7 @@ end
 plot_2d_hats(x_level, y_level)
 
 # ╔═╡ 37d0c51f-2fdc-4469-967c-456d7ecac418
-func_2d(x,y) = 16*x*(1-x)*y*(1-y) #-((x-.7)*2)^2 - ((y-.4)*2)^2 + 2
+func_2d(x,y) = -((x-.7)*2)^2 - ((y-.4)*2)^2 + 2 #16*x*(1-x)*y*(1-y) #-((x-.7)*2)^2 - ((y-.4)*2)^2 + 2
 
 # ╔═╡ 4e0808a5-eedd-4d3a-8360-3759213c35ce
 begin
@@ -240,65 +240,64 @@ end
 # ╔═╡ 82024b6b-a99d-4682-bcb8-e471e4dc5659
 @bind level_2d PlutoUI.Slider(0:10; default=2, show_value=true)
 
-# ╔═╡ bf4b951b-7e2b-49aa-beef-8d898c70c042
-n_2d = 2^level_2d+1
-
 # ╔═╡ cf3ff004-719d-4f46-a1e1-e92a5ff87ac7
 # Iterative method
 function calc_2d_aprox_iter(func, level)
-	aprox = zeros(n_2d, n_2d)
-	surps = zeros(n_2d, n_2d)
-	#quad = (func(0)+func(1))*.5
+	n_max = 2^level
+	hn_max = 1/n_max
+	
+	aprox = zeros(n_max+1, n_max+1)
+	surps = zeros(n_max+1, n_max+1)
+	quad = 0
 
-	hn_max = 1/(2^level)
-
-	for i in 1:n_2d
+	for i in 1:n_max
+		hn_1 = min(.5,gcd(i-1,n_max)/n_max)
+		hn_2 = min(.5,gcd(i,n_max)/n_max)
+		println(hn_1,hn_2)
 		surps[i,begin] = func_2d((i-1)*hn_max, 0)
-		surps[i,end] = func_2d((i-1)*hn_max, 1)
-		surps[begin,i] = func_2d(0, (i-1)*hn_max)
+		surps[i+1,end] = func_2d((i)*hn_max, 1)
+		surps[begin,i+1] = func_2d(0, (i)*hn_max)
 		surps[end, i] = func_2d(1, (i-1)*hn_max)
+		quad += (surps[i,begin] + surps[end, i]) * hn_1 +
+			(surps[i+1,end] + surps[begin,i+1]) * hn_2
 	end
+	quad *= .5
 
 	for k in 0:1
 		for lev_i in 1:level
 			n_lev_i = 2^lev_i
 			hn_lev_i = 1/n_lev_i
-			for i in min(1,lev_i):min(2,lev_i+1):n_lev_i
+			for i in 1:2:n_lev_i
 				for lev_j in level:-1:1
 					n_lev_j = 2^lev_j
 					hn_lev_j = 1/n_lev_j
 					d = 2^(level-lev_j)
-					for j in min(1,lev_j):min(2,lev_j+1):n_lev_j
-						id = Int(i*hn_lev_i*(n_2d-1)+1)
-						jd = Int(j*hn_lev_j*(n_2d-1)+1)
+					for j in 1:2:n_lev_j
+						id = Int(i*hn_lev_i*(n_max)+1)
+						jd = Int(j*hn_lev_j*(n_max)+1)
 						if k == 0
-							surps[id,jd] = func_2d(i*hn_lev_i, j*hn_lev_j)
-						end
-						if lev_i>0
-							if k == 0
-								surps[id,jd] -= (func(i*hn_lev_i, (j-1)*hn_lev_j) +
-									func(i*hn_lev_i, (j+1)*hn_lev_j)) * .5
-							elseif k == 1
-								surps[jd,id] -= (surps[jd-d, id] +
-									surps[jd+d, id]) * .5
-							end
-							#quad += surps[id,jd] * hn_lev
+							surps[id,jd] = func_2d(i*hn_lev_i, j*hn_lev_j) -
+								(func(i*hn_lev_i, (j-1)*hn_lev_j) +
+								func(i*hn_lev_i, (j+1)*hn_lev_j)) * .5
+						elseif k == 1
+							surps[jd,id] -= (surps[jd-d, id] +
+								surps[jd+d, id]) * .5
+							quad += surps[jd,id] * hn_lev_i * hn_lev_j
 						end
 						#aprox += hat_func.(x_plot, i*hn_lev, hn_lev)*surps[id, jd]
 					end
 				end
 			end
 		end
-		display(surps)
 	end
-	return surps
+	return surps, quad
 end
 
 # ╔═╡ f258061e-eab6-447a-bb71-2ac0f13fde4f
 begin
-	surps_2d = calc_2d_aprox_iter(func_2d, level_2d)
-	x_aprox = range(0,1,length=n_2d)
-	y_aprox = range(0,1,length=n_2d)
+	surps_2d, quad_2d = calc_2d_aprox_iter(func_2d, level_2d)
+	x_aprox = range(0,1,length=2^level_2d+1)
+	y_aprox = range(0,1,length=2^level_2d+1)
 	fig_2d_aprox = Figure()
 	ax_2d_aprox = Axis3(fig_2d_aprox[1, 1], azimuth = az * pi, elevation = el * pi)
 	if "aproximation" in to_plot
@@ -311,22 +310,25 @@ begin
 	fig_2d_aprox
 end
 
-# ╔═╡ 287a4348-de8c-427f-a376-4fc22883b6b9
-x_a_prox = range(0,1,length=n_2d)
-
-# ╔═╡ 9578789a-df0c-4bed-af20-a00f26bc2df8
-surps_2_d = calc_2d_aprox_iter(func_2d, level_2d)
-
-# ╔═╡ 587e6aed-be18-49ee-b034-636e98fab68f
-surps_2_d[begin, end]
-
 # ╔═╡ e84d535f-565e-4c48-820e-f1f1db5260a5
 surps_2d
 
-# ╔═╡ 66650664-2468-4007-a520-5317cc68c04e
-for i in 10:-2:1
-	println(i)
+# ╔═╡ 10b9598f-2855-46f5-9994-4b67b2ae0c9c
+begin
+	func_v_2d(x) = func_2d(x[1],x[2])
+	sol_2d = hcubature(func_v_2d, [0,0], [1,1])[1]
+	err_2d = abs(sol_2d-quad_2d)/sol_2d
+	md"""
+	The value of the integral is **$( round(sol_2d, digits=5) )**
+	
+	The approximated value with **$(2^level_2d+1)** points is **$( round(quad_2d, digits=5) )**
+	
+	Which has an error of **$( round(err_2d*100, sigdigits=3) )%**
+	"""
 end
+
+# ╔═╡ ee256beb-49f3-431b-bd10-30a1491da972
+
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1999,7 +2001,7 @@ version = "1.9.2+0"
 # ╟─07fb8f13-00be-42e1-aa5f-aad6dd80e6fb
 # ╠═d6e321f7-dbe0-47e3-bada-795243a97da4
 # ╟─74cd64ff-5ace-4fcf-bac1-d3e4e656aa14
-# ╟─31a3d986-1f3f-4bfc-98dc-17c84f574e4e
+# ╠═31a3d986-1f3f-4bfc-98dc-17c84f574e4e
 # ╟─fdb10ff2-82f4-4431-8d3e-679b0800e5e3
 # ╟─b04a5a06-c1d5-478e-9a92-55dc5a9750ab
 # ╟─554f531a-6b27-401f-a58e-4a7d6f5817d7
@@ -2017,13 +2019,10 @@ version = "1.9.2+0"
 # ╠═37d0c51f-2fdc-4469-967c-456d7ecac418
 # ╟─4e0808a5-eedd-4d3a-8360-3759213c35ce
 # ╟─82024b6b-a99d-4682-bcb8-e471e4dc5659
-# ╟─bf4b951b-7e2b-49aa-beef-8d898c70c042
 # ╠═cf3ff004-719d-4f46-a1e1-e92a5ff87ac7
 # ╠═f258061e-eab6-447a-bb71-2ac0f13fde4f
-# ╠═287a4348-de8c-427f-a376-4fc22883b6b9
-# ╠═9578789a-df0c-4bed-af20-a00f26bc2df8
-# ╠═587e6aed-be18-49ee-b034-636e98fab68f
 # ╠═e84d535f-565e-4c48-820e-f1f1db5260a5
-# ╠═66650664-2468-4007-a520-5317cc68c04e
+# ╠═10b9598f-2855-46f5-9994-4b67b2ae0c9c
+# ╠═ee256beb-49f3-431b-bd10-30a1491da972
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
