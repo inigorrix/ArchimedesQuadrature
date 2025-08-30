@@ -258,10 +258,18 @@ function calc_2d_aprox_iter(func, level)
 	quad = (surps[begin,begin] + surps[begin,end] +
 		surps[end,begin] + surps[end,end]) * .5 * .5
 	
-	aprox[begin,:] += hat_func.(x_plot_2d, 0, 1)*surps[begin, begin] +
+	aprox[:,begin] .+= hat_func.(x_plot_2d, 0, 1)*surps[begin, begin] +
 		hat_func.(x_plot_2d, 1, 1)*surps[end, begin]
-	aprox[end,:] += hat_func.(x_plot_2d, 0, 1)*surps[begin, end] +
+	aprox[:,end] += hat_func.(x_plot_2d, 0, 1)*surps[begin, end] +
 		hat_func.(x_plot_2d, 1, 1)*surps[end, end]
+	aprox[begin,begin+1:end-1] .+=
+		(hat_func.(x_plot_2d, 0, 1)*surps[begin, begin] +
+		hat_func.(x_plot_2d, 1, 1)*surps[begin, end])[begin+1:end-1]
+	aprox[end,begin+1:end-1] .+=
+		(hat_func.(x_plot_2d, 0, 1)*surps[end, begin] +
+		hat_func.(x_plot_2d, 1, 1)*surps[end, end])[begin+1:end-1]
+
+	display(aprox)
 
 	for k in 0:1
 		for lev_i in 1:level
@@ -281,8 +289,15 @@ function calc_2d_aprox_iter(func, level)
 
 					quad += (surps[id,begin] + surps[id, end] +
 						surps[begin, id] + surps[end, id]) * hn_lev_i * .5
-					aprox[id,:] += hat_func.(x_plot_2d, 0, 1)*surps[begin, id] +
-						hat_func.(x_plot_2d, 1, 1)*surps[end, id]
+					
+					aprox[:,begin] .+=
+						hat_func.(x_plot_2d, i*hn_lev_i, hn_lev_i)*surps[id, begin]
+					aprox[:,end] .+=
+						hat_func.(x_plot_2d, i*hn_lev_i, hn_lev_i)*surps[id, end]
+					aprox[begin,:] .+=
+						hat_func.(x_plot_2d, i*hn_lev_i, hn_lev_i)*surps[begin, id]
+					aprox[end,:] .+=
+						hat_func.(x_plot_2d, i*hn_lev_i, hn_lev_i)*surps[end, id]
 				end
 				for lev_j in level:-1:1
 					n_lev_j = 2^lev_j
@@ -299,7 +314,7 @@ function calc_2d_aprox_iter(func, level)
 								surps[jd+d, id]) * .5
 							quad += surps[jd,id] * hn_lev_i * hn_lev_j
 							
-							aprox[id,:] += hat_func.(x_plot_2d, j*hn_lev_j, hn_lev_j).*surps[id, jd]
+							#aprox[id,:] += hat_func.(x_plot_2d, j*hn_lev_j, hn_lev_j).*surps[id, jd]
 						end
 					end
 				end
@@ -342,6 +357,15 @@ end
 
 # ╔═╡ 77766299-52a1-4959-adeb-9d1095d04663
 aprox_2d
+
+# ╔═╡ 90e17c2b-ad6b-4f75-aa18-5ba125b20708
+begin
+	aprox_2d[begin,begin+1:end-1] = [3,3,3]
+	aprox_2d
+end
+
+# ╔═╡ 808edb26-d570-4630-b9ec-ae4849ca5e85
+surps_2d
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -2006,7 +2030,7 @@ version = "1.9.2+0"
 # ╠═def8acb1-3536-4d91-a6b1-468624dcfb59
 # ╟─edf673b3-d771-45a7-b0de-3e3635114458
 # ╠═05bcbeb9-27ba-4463-b788-44a3f3a9b8de
-# ╟─cbef4fdb-556c-45df-90a1-8dd29b9b90e7
+# ╠═cbef4fdb-556c-45df-90a1-8dd29b9b90e7
 # ╠═436ccd41-759b-41ca-bb82-3d2689713b14
 # ╟─982250d3-87ff-4af1-8c75-ab50f0c86a2e
 # ╟─ca6ce552-2ac0-44d3-98bb-e0069ea0908e
@@ -2036,5 +2060,7 @@ version = "1.9.2+0"
 # ╠═f258061e-eab6-447a-bb71-2ac0f13fde4f
 # ╟─10b9598f-2855-46f5-9994-4b67b2ae0c9c
 # ╠═77766299-52a1-4959-adeb-9d1095d04663
+# ╠═90e17c2b-ad6b-4f75-aa18-5ba125b20708
+# ╠═808edb26-d570-4630-b9ec-ae4849ca5e85
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
