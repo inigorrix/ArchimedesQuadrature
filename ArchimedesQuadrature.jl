@@ -223,7 +223,7 @@ end
 plot_2d_hats(x_level, y_level)
 
 # ╔═╡ 37d0c51f-2fdc-4469-967c-456d7ecac418
-func_2d(x,y) = -((x-.7)*2)^2 - ((y-.4)*2)^2 + 2 #sin(10*x)*cos(10*y) #16*x*(1-x)*y*(1-y) #-((x-.7)*2)^2 - ((y-.4)*2)^2 + 2
+func_2d(x,y) = 16*x*(1-x)*y*(1-y) #sin(10*x)*cos(10*y) #16*x*(1-x)*y*(1-y) #-((x-.7)*2)^2 - ((y-.4)*2)^2 + 2
 
 # ╔═╡ 4e0808a5-eedd-4d3a-8360-3759213c35ce
 begin
@@ -238,7 +238,7 @@ begin
 end
 
 # ╔═╡ 82024b6b-a99d-4682-bcb8-e471e4dc5659
-@bind level_2d PlutoUI.Slider(0:10; default=2, show_value=true)
+@bind level_2d PlutoUI.Slider(0:10; default=4, show_value=true)
 
 # ╔═╡ 069b629f-dd8f-45b0-8a6c-cc35dacc2883
 # Iterative method
@@ -246,8 +246,6 @@ function calc_2d_aprox_iter(func, level)
 	n_max = 2^level
 	hn_max = 1/n_max
 
-	x_plot_2d = range(0,1,length=n_max+1)
-	aprox = zeros(n_max+1, n_max+1)
 	surps = zeros(n_max+1, n_max+1)
 	quad = 0
 
@@ -257,19 +255,6 @@ function calc_2d_aprox_iter(func, level)
 	surps[end,end] = func_2d(1, 1)
 	quad = (surps[begin,begin] + surps[begin,end] +
 		surps[end,begin] + surps[end,end]) * .5 * .5
-	
-	aprox[:,begin] .+= hat_func.(x_plot_2d, 0, 1)*surps[begin, begin] +
-		hat_func.(x_plot_2d, 1, 1)*surps[end, begin]
-	aprox[:,end] += hat_func.(x_plot_2d, 0, 1)*surps[begin, end] +
-		hat_func.(x_plot_2d, 1, 1)*surps[end, end]
-	aprox[begin,begin+1:end-1] .+=
-		(hat_func.(x_plot_2d, 0, 1)*surps[begin, begin] +
-		hat_func.(x_plot_2d, 1, 1)*surps[begin, end])[begin+1:end-1]
-	aprox[end,begin+1:end-1] .+=
-		(hat_func.(x_plot_2d, 0, 1)*surps[end, begin] +
-		hat_func.(x_plot_2d, 1, 1)*surps[end, end])[begin+1:end-1]
-
-	display(aprox)
 
 	for k in 0:1
 		for lev_i in 1:level
@@ -289,15 +274,6 @@ function calc_2d_aprox_iter(func, level)
 
 					quad += (surps[id,begin] + surps[id, end] +
 						surps[begin, id] + surps[end, id]) * hn_lev_i * .5
-					
-					aprox[:,begin] .+=
-						hat_func.(x_plot_2d, i*hn_lev_i, hn_lev_i)*surps[id, begin]
-					aprox[:,end] .+=
-						hat_func.(x_plot_2d, i*hn_lev_i, hn_lev_i)*surps[id, end]
-					aprox[begin,:] .+=
-						hat_func.(x_plot_2d, i*hn_lev_i, hn_lev_i)*surps[begin, id]
-					aprox[end,:] .+=
-						hat_func.(x_plot_2d, i*hn_lev_i, hn_lev_i)*surps[end, id]
 				end
 				for lev_j in level:-1:1
 					n_lev_j = 2^lev_j
@@ -313,31 +289,23 @@ function calc_2d_aprox_iter(func, level)
 							surps[jd,id] -= (surps[jd-d, id] +
 								surps[jd+d, id]) * .5
 							quad += surps[jd,id] * hn_lev_i * hn_lev_j
-							
-							#aprox[id,:] += hat_func.(x_plot_2d, j*hn_lev_j, hn_lev_j).*surps[id, jd]
 						end
 					end
 				end
 			end
 		end
 	end
-	return aprox, surps, quad
+	return surps, quad
 end
 
 # ╔═╡ f258061e-eab6-447a-bb71-2ac0f13fde4f
 begin
-	aprox_2d, surps_2d, quad_2d = calc_2d_aprox_iter(func_2d, level_2d)
+	surps_2d, quad_2d = calc_2d_aprox_iter(func_2d, level_2d)
 	x_aprox = range(0,1,length=2^level_2d+1)
 	y_aprox = range(0,1,length=2^level_2d+1)
 	fig_2d_aprox = Figure()
 	ax_2d_aprox = Axis3(fig_2d_aprox[1, 1], azimuth = az * pi, elevation = el * pi)
-	if "aproximation" in to_plot
-		wireframe!(x_aprox, y_aprox, aprox_2d)
-	end
-	if "function" in to_plot
-		wireframe!(x_2d_plot, y_2d_plot,
-			   [func_2d(xi,yi) for xi in x_2d_plot, yi in y_2d_plot])
-	end
+	wireframe!(x_aprox, y_aprox, surps_2d)
 	fig_2d_aprox
 end
 
@@ -354,18 +322,6 @@ begin
 	Which has an error of **$( round(err_2d*100, sigdigits=3) )%**
 	"""
 end
-
-# ╔═╡ 77766299-52a1-4959-adeb-9d1095d04663
-aprox_2d
-
-# ╔═╡ 90e17c2b-ad6b-4f75-aa18-5ba125b20708
-begin
-	aprox_2d[begin,begin+1:end-1] = [3,3,3]
-	aprox_2d
-end
-
-# ╔═╡ 808edb26-d570-4630-b9ec-ae4849ca5e85
-surps_2d
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -2053,14 +2009,11 @@ version = "1.9.2+0"
 # ╟─cf87a49e-11d8-4aa9-87d5-7acf32bac9b7
 # ╟─3bbfadf9-21a1-4c94-a725-41fd4f19a26c
 # ╟─d926d4e9-3805-4748-9c8d-fa1100e17793
-# ╠═37d0c51f-2fdc-4469-967c-456d7ecac418
+# ╟─37d0c51f-2fdc-4469-967c-456d7ecac418
 # ╟─4e0808a5-eedd-4d3a-8360-3759213c35ce
 # ╟─82024b6b-a99d-4682-bcb8-e471e4dc5659
-# ╠═069b629f-dd8f-45b0-8a6c-cc35dacc2883
-# ╠═f258061e-eab6-447a-bb71-2ac0f13fde4f
+# ╟─069b629f-dd8f-45b0-8a6c-cc35dacc2883
+# ╟─f258061e-eab6-447a-bb71-2ac0f13fde4f
 # ╟─10b9598f-2855-46f5-9994-4b67b2ae0c9c
-# ╠═77766299-52a1-4959-adeb-9d1095d04663
-# ╠═90e17c2b-ad6b-4f75-aa18-5ba125b20708
-# ╠═808edb26-d570-4630-b9ec-ae4849ca5e85
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
